@@ -1,0 +1,127 @@
+# Settings only for updated GNU tools
+if [ "${BASH_VERSINFO[0]}" != "3" ]
+then
+	# Set Bash color and stuff.
+	export PS1='\[\033[38;5;14m\]\u\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput sgr0)\]\[\033[38;5;11m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\] \\$ \[$(tput sgr0)\]'
+	alias ls='ls -h --color=auto --quoting-style=literal'
+	export EDITOR="/usr/local/bin/vim"
+
+	# Color the man pages
+	man() {
+		env \
+			LESS_TERMCAP_mb="$(printf '\e[1;31m')" \
+			LESS_TERMCAP_md="$(printf '\e[1;31m')" \
+			LESS_TERMCAP_me="$(printf '\e[0m')" \
+			LESS_TERMCAP_se="$(printf '\e[0m')" \
+			LESS_TERMCAP_so="$(printf '\e[1;44;33m')" \
+			LESS_TERMCAP_ue="$(printf '\e[0m')" \
+			LESS_TERMCAP_us="$(printf '\e[1;32m')" \
+			man "$@"
+	}
+
+	# Brew analytics optout
+	export HOMEBREW_NO_ANALYTICS=1
+
+	# Homebrew bash completion
+	if [ -f /usr/local/share/bash-completion/bash_completion ]; then
+		. /usr/local/share/bash-completion/bash_completion
+	fi
+
+	# Ruby Stuff
+	export GEM_HOME=/usr/local/GEM_HOME
+
+	# Add homebrew sbin to path
+	if [[ "$PATH" != *"/usr/local/sbin:"* ]]
+	then
+		export PATH="/usr/local/sbin:$PATH"
+	fi
+
+	# Include GNU Tools
+	if [[ "$PATH" != *"libexec/gnubin:"* ]]
+	then
+		export PATH="$GEM_HOME/bin:/usr/local/opt/curl/bin:/usr/local/opt/coreutils/libexec/gnubin:/usr/local/opt/findutils/libexec/gnubin:/usr/local/opt/gnu-tar/libexec/gnubin:/usr/local/opt/gnu-sed/libexec/gnubin:/usr/local/opt/grep/bin:/usr/local/bin:$PATH:/usr/local/android_platform_tools"
+		export MANPATH="/usr/local/opt/curl/share/man:/usr/local/opt/coreutils/libexec/gnuman:/usr/local/opt/findutils/libexec/gnuman:/usr/local/opt/gnu-tar/libexec/gnuman:/usr/local/opt/gnu-sed/libexec/gnuman:/usr/local/opt/grep/share/man:$MANPATH"
+	fi
+
+	# Update tools aliases
+	alias vi='vim'
+	alias which="gwhich"
+	alias grep='ggrep --color=auto'
+
+	# Set JAVA_HOME
+	JAVA_HOME=$(/usr/libexec/java_home)
+	export JAVA_HOME
+
+	# cd to the path of the finder window
+	cdf() {
+		target=$(osascript -e 'tell application "Finder" to if (count of Finder windows) > 0 then get POSIX path of (target of front Finder window as text)')
+		if [ "$target" != "" ]; then
+			cd "$target" || exit ; pwd
+		else
+			echo 'No Finder window found' >&2
+		fi
+	}
+
+	# Some more aliases to make git usage pretty
+	alias git-remove-dangling-commits='git reflog expire --expire-unreachable=now --all;git gc --prune=now'
+
+	# A function to ease searching files
+	findstring(){ find . -type "f" -exec "grep" -il "$1" {} + ; }
+
+	# A function to remove DS_Store from directories
+	removeDSStore(){ find . -name '*.DS_Store' -type "f" -delete; }
+
+	# A function to simplify extracting archives
+	extract() {
+		if [ -z "$1" ]; then
+			# display usage if no parameters given
+			echo "Usage: extract <path/file_name>.<zip|rar|bz2|gz|tar|tbz2|tgz|Z|7z|xz|ex|tar.bz2|tar.gz|tar.xz>"
+		else
+			if [ -f "$1" ] ; then
+				nameInLowerCase=$(echo "$1" | awk '{print tolower($0)}')
+				case "$nameInLowerCase" in
+					*.tar.*|*.tbz2|*.tgz) tar xf ./"$1"      ;;
+					*.lzma)               unlzma ./"$1"      ;;
+					*.bz2)                bunzip2 ./"$1"     ;;
+					*.rar)                unrar x -ad ./"$1" ;;
+					*.gz)                 gunzip ./"$1"      ;;
+					*.zip)                unzip ./"$1"       ;;
+					*.Z)                  uncompress ./"$1"  ;;
+					*.7z)                 7z x ./"$1"        ;;
+					*.xz)                 unxz ./"$1"        ;;
+					*)                    echo "extract: '$1' - unknown archive method" ;;
+				esac
+			else
+				echo "'$1' - file does not exist"
+			fi
+		fi
+	}
+
+	# iTerm shell integration
+	test -e "${HOME}/.iterm2_shell_integration.bash" && source "${HOME}/.iterm2_shell_integration.bash"
+
+	# Better tab completion
+	bind 'TAB: menu-complete' 
+	bind '"\e[Z": menu-complete-backward'
+	bind 'set menu-complete-display-prefix on'
+	bind 'set colored-completion-prefix on'
+	bind 'set completion-ignore-case on'
+	bind 'set completion-map-case on'
+	bind 'set show-all-if-ambiguous on'
+	bind 'set mark-symlinked-directories on'
+
+	# Pip update
+	alias pip2Update="pip2 freeze --local | grep -v '^\\-e' | cut -d = -f 1  | xargs -n1 pip2 install -U"
+	alias pip3Update="pip3 freeze --local | grep -v '^\\-e' | cut -d = -f 1  | xargs -n1 pip3 install -U"
+
+	# Recheck win size after every command
+	shopt -s checkwinsize
+
+	# History Tweaks
+	HISTSIZE=20000
+	HISTFILESIZE=20000
+	HISTCONTROL="erasedups:ignoreboth"
+	export HISTIGNORE="&:[ ]*:exit:ls:bg:fg:history:clear"
+	shopt -s histappend
+	shopt -s cmdhist
+fi
