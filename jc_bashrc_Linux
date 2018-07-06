@@ -1,0 +1,118 @@
+# Set Bash color and stuff
+export PS1='\[\033[38;5;14m\]\u\[$(tput sgr0)\]\[\033[38;5;15m\] \[$(tput sgr0)\]\[\033[38;5;11m\]\w\[$(tput sgr0)\]\[\033[38;5;15m\] \\$ \[$(tput sgr0)\]'
+alias ls='ls -h --color=auto --quoting-style=literal'
+if [ -f /opt/linuxbrew/.linuxbrew/bin/vim ]
+then
+	export EDITOR="/opt/linuxbrew/.linuxbrew/bin/vim"
+fi
+
+# Color Man Pages
+man() {
+	env \
+	LESS_TERMCAP_mb="$(printf '\e[1;31m')" \
+	LESS_TERMCAP_md="$(printf '\e[1;31m')" \
+	LESS_TERMCAP_me="$(printf '\e[0m')" \
+	LESS_TERMCAP_se="$(printf '\e[0m')" \
+	LESS_TERMCAP_so="$(printf '\e[1;44;33m')" \
+	LESS_TERMCAP_ue="$(printf '\e[0m')" \
+	LESS_TERMCAP_us="$(printf '\e[1;32m')" \
+	man "$@"
+}
+
+findstring(){ find . -type f -exec "grep" -l "$1" {} + ; }
+findport(){
+	proc_pid=$(netstat -tnlp 2>/dev/null | grep "$1"  | awk '{print $7}' | cut -d "/" -f1)
+	if [ -n "$proc_pid" ] ; then
+		ps -ef | grep "$proc_pid" | grep -v "color=auto $proc_pid"
+	fi
+}
+
+# A function to simplify extracting archives
+extract () {
+	if [ -f "$1" ] ; then
+		case $1 in
+			*.tar.*|*.tbz2|*.tgz)   tar xf "$1"     ;;
+			*.lzma)                 unlzma ./"$1"   ;;
+			*.bz2)                  bunzip2 "$1"    ;;
+			*.rar)                  unrar e "$1"    ;;
+			*.gz)                   gunzip "$1"     ;;
+			*.zip)                  unzip "$1"      ;;
+			*.Z)                    uncompress "$1" ;;
+			*.7z)                   7z x "$1"       ;;
+			*.xz)                   unxz "$1"       ;;
+			*)     echo "'$1' cannot be extracted via extract()" ;;
+		esac
+	else
+		echo "'$1' is not a valid file"
+	fi
+}
+
+# Some more aliases to make git usage pretty
+alias git-remove-dangling-commits='git reflog expire --expire-unreachable=now --all;git gc --prune=now'
+
+# Pip Update
+alias pipUpdate="pip2 freeze --local | grep -v '^\\-e' | cut -d = -f 1  | xargs -n1 pip2 install -U"
+alias pip3Update="pip3 freeze --local | grep -v '^\\-e' | cut -d = -f 1  | xargs -n1 pip3 install -U"
+
+# Docker Aliases
+alias docker_clean_images='docker rmi $(docker images -a --filter=dangling=true -q)'
+alias docker_clean_ps='docker rm $(docker ps --filter=status=exited --filter=status=created -q)'
+
+# Smarter Bash Completion
+bind 'TAB: menu-complete' 
+bind '"\e[Z": menu-complete-backward'
+bind 'set menu-complete-display-prefix on'
+bind 'set colored-stats on'
+bind 'set colored-completion-prefix on'
+bind "set completion-ignore-case on"
+bind "set completion-map-case on"
+bind "set show-all-if-ambiguous on"
+bind "set mark-symlinked-directories on"
+
+# Resize window after every command
+shopt -s checkwinsize
+
+# History Tweaks
+shopt -s histappend
+shopt -s cmdhist
+HISTSIZE=5000
+HISTFILESIZE=10000
+HISTCONTROL="erasedups:ignoreboth"
+export HISTIGNORE="&:[ ]*:exit:ls:ls -lrt:ls -al:ls -a:cd:bg:fg:history:pwd:clear"
+
+# Add linuxbrew to path
+if [[ "$PATH" != *"/opt/linuxbrew/.linuxbrew/"* ]]
+then
+	export PATH="/opt/linuxbrew/.linuxbrew/sbin:/opt/linuxbrew/.linuxbrew/bin:$PATH"
+	export MANPATH="/opt/linuxbrew/.linuxbrew/share/man:$MANPATH"
+	export INFOPATH="/opt/linuxbrew/.linuxbrew/share/info:$INFOPATH"
+fi
+
+[ -f /opt/linuxbrew/.linuxbrew/etc/bash_completion ] && . /opt/linuxbrew/.linuxbrew/etc/bash_completion
+
+# Vagrant helper functions
+vstart(){
+	vm_list=$(vagrant status | tail -n +3 | head -n -4 | awk '{print $1}')
+	for i in $vm_list; do vagrant up "$i" & done
+}
+vstop(){
+	vm_list=$(vagrant status | tail -n +3 | head -n -4 | awk '{print $1}')
+	for i in $vm_list; do vagrant halt "$i" & done
+}
+
+# Epoch time
+epochtime(){
+	time_epoch=$1
+
+	if [[ ${#time_epoch} == "13" ]]
+	then
+		time_epoch=${time_epoch%???}
+	fi
+
+	if [[ ${#time_epoch} == "10" ]]
+	then
+		date -d "@$time_epoch"
+	else
+		echo "Invalid input"
+	fi
+}
